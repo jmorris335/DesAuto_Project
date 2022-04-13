@@ -1,4 +1,3 @@
-# %%
 import matplotlib.pyplot as plt
 # This import registers the 3D projection, but is otherwise unused.
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
@@ -239,16 +238,3 @@ class PlotSTL(object):
                 if vertex[i] < limits[i*2]: limits[i*2] = vertex[i]
                 if vertex[i] > limits[i*2+1]: limits[i*2+1] = vertex[i]
         return limits
-    
-# %% Caller
-stl = STL("Sample STL Files/House4 106.stl")
-print(stl.toString())
-StlPlt = PlotSTL(stl)
-StlPlt.orthographic("left")
-StlPlt.rotate(psi=np.pi/4)
-StlPlt.moveToFloor()
-StlPlt.moveToCenter()
-StlPlt.updateSTL()
-StlPlt.plotSTL()
-
-# %%
