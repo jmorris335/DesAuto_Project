@@ -158,6 +158,7 @@ class PlotSTL(object):
         self.align(0, 0, 'z')
 
     # Transformation Methods
+    #TODO: Need to make these methods a seperate class: TransformSTL, so that other classes like SliceSTL can access them
     def getCentroid(self):
         x = list()
         y = list()

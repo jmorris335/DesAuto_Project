@@ -81,7 +81,7 @@ class STL_Facet:
         return str(self.getMatrix())
 
 
-class STL(object):
+class STL:
     def __init__(self, file=None):
         ''' Contains an STL object, which can include the STL file, or a collection of 
         facets that define the object.
