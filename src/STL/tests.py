@@ -1,3 +1,4 @@
+# %%
 import matplotlib.pyplot as plt
 # This import registers the 3D projection, but is otherwise unused.
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
@@ -13,13 +14,7 @@ class TestSliceSTL:
 
     def plot(self):
         for slice in self.slicer.slices:
-            xline = list()
-            yline = list()
-            zline = list()
-            for edge in slice.edges:
-                xline.append(edge.pnt1[0])
-                yline.append(edge.pnt1[1])
-                zline.append(edge.pnt1[2])
+            xline, yline, zline = slice.getXYZCoordinates()
             self.ax.plot3D(xline, yline, zline)
 
     def align(self, elev, azim, vertical_axis='z'):
@@ -29,11 +24,11 @@ class TestSliceSTL:
 
     
 # %%
-stl = STL("../../Sample STL Files/House3 64.stl")
-slicer = Slicer(stl, 3)
+stl = STL("../../Sample STL Files/Eiffel Tower 760.stl")
+slicer = Slicer(stl, 10)
 slicer.sliceSTL()
 testSlicer = TestSliceSTL(slicer)
-testSlicer.align(90, 45, 'z')
+testSlicer.align(10, 45, 'z')
 testSlicer.plot()
 
 # %%

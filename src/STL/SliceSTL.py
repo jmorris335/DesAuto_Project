@@ -1,7 +1,5 @@
-# %%
 from copy import deepcopy
 from math import floor, ceil
-import numpy as np
 from ReadSTL import STL, STL_Facet as Facet
 
 class Edge:
@@ -12,14 +10,45 @@ class Edge:
         self.pnt2 = pnt2
         self.normal = normal
 
-class Slice:
-    def __init__(self, points, normals):      
-        ''' A collection of edges that define a slice.'''
+class Hull:
+    ''' A closed profile composed of line segments'''
+    def __init__(self, points, normals):
         self.pnts = points
         self.normals = normals
-        self.z_datum = points[0][0]
 
-    #FIXME: Add methods for accessing a certain edge, getting all coordinates, etc.
+    def getXYZCoordinates(self):
+        xcoords = list()
+        ycoords = list()
+        zcoords = list()
+        for point in self.pnts:
+            xcoords.append(point[0])
+            ycoords.append(point[1])
+            zcoords.append(point[2])
+        return xcoords, ycoords, zcoords
+
+class Slice:
+    def __init__(self, hulls):      
+        ''' A collection of hulls that define a slice.
+        
+        Inputs
+        ---
+        hulls : list of Hull-type objects
+        '''
+        self.hulls = hulls
+        self.z_datum = hulls[0].pnts[0][0]
+
+    def getXYZCoordinates(self):
+        xcoords = list()
+        ycoords = list()
+        zcoords = list()
+        for hull in self.hulls:
+            hull_x, hull_y, hull_z = hull.getXYZCoordinates()
+            xcoords.append(hull_x)
+            ycoords.append(hull_y)
+            zcoords.append(hull_z)
+        return xcoords, ycoords, zcoords
+
+    #FIXME: Add methods for accessing a certain edge
 
 class Slicer:
     def __init__(self, stl: STL, layer_height):
@@ -34,15 +63,26 @@ class Slicer:
             A float or int representing the height of each layer in the units
             of the stl coordinates.
         
-        Process
+        Slicing Process
         ---
         1. Pass the object. Determine number of slices
         2. For each slice:
-            a. Find which faces intersect the plane of the slice
-            b. Determine the intersection coordinates
-            c. Form line segments out of each face intersection
-            d. Connect line segments with similar endpoint coordinates
-        6. Form the slice and repeat until the max z-coordinate is reached
+            1. Find which faces intersect the plane of the slice
+            2. Determine the intersection coordinates
+            3. Form line segments out of each face intersection
+            4. Connect line segments with similar endpoint coordinates into a hull
+            5. Form the slice from the list of hulls
+        
+        Notes
+        ---
+        1. The plane of the slice is always the bottom of the interval defined by the layer
+        height. For instance, if an object's lowest z-coordinate is z = 2.2, then the first
+        slice will comprise all the faces that intersect the z = 2.2 plane. 
+        2. Slice planes are always parallel to the XY plane
+        3. The top of the object, if not a even divisor with the layer height, is also added
+        as a slice plane. For instance, if an object with a minimum z-coordinate of z = 0, and
+        a maximum z-coordinate of z = 1 has a layer height of 0.3, then there will be 4 slice
+        planes at z = [0, .3, .6, .9, 1].
         '''
         self.stl = stl
         self.del_z = layer_height
@@ -89,60 +129,43 @@ class Slicer:
             ending_index += 1
         return range(starting_index, ending_index)
 
-    # def sliceSTL(self):
-    #     slices_points = self.getCoordinatesOfSlices()
-    #     self.formEdgesFromCoordinates(slices_points)
+    def findFacetsAtDatum(self, facets, z_datum):
+        ''' Returns all faces in facets that intersect the plane that is located at the 
+        z_datum and is parallel to the XY plane'''
+        out = list()
+        for face in facets:
+            if self.faceIntersectsDatum(face, z_datum):
+                out.append(face)
+        return out
 
     # Slicing Functions
     def sliceSTL(self):
+        ''' Calling function that forms the slices for each layer, which are accessible
+        from the member "slices".'''
         all_unsorted_edges = self.getEdgesForAllSlices()
         for unsorted_edges in all_unsorted_edges:
-            sorted_points, sorted_normals = self.stitchEdges(unsorted_edges)
-            temp = Slice(sorted_points, sorted_normals, layer_height)
-            self.slices.append(temp)
+            hulls = self.makeHulls(unsorted_edges)
+            self.slices.append(Slice(hulls))
 
     def getEdgesForAllSlices(self):
         ''' Returns a list of lists, where each entry corresponds to a list of all the edges 
         for each slice.'''
         slices_edges = list()
-        for layer_index in range(self.numSlices):
+        for layer_index in range(self.numSlices-1):
             z_datum = self.min_z + (layer_index * self.del_z)
             slices_edges.append(self.getSliceEdges(layer_index, z_datum))
         slices_edges.append(self.getSliceEdges(self.numSlices-1, self.max_z))
         return slices_edges
-
-    # def getCoordinatesOfSlices(self): #References wrong function
-    #     ''' Returns a list of lists, where each entry corresponds to a list of all the edge
-    #     points for each slice.'''
-    #     slices_points = list()
-    #     for layer_index in range(self.numSlices):
-    #         z_datum = self.min_z + (layer_index * self.del_z)
-    #         slices_points.append(self.getSlicePoints(layer_index, z_datum))
-    #     slices_points.append(self.getSlicePoints(self.numSlices-1, self.max_z))
-    #     return slices_points
-
-    # def getSlicePoints(self, layer_index, z_datum): #Not Working
-    #     ''' Returns the coordinates for the intersections of the edges of each face that
-    #     crosses the z_datum plane, as well as the normal of the generating face.'''
-    #     out = list()
-    #     facets_in_slice = self.facet_groups[layer_index]
-    #     for face in facets_in_slice:
-    #         pnts = face.vertices
-    #         for i in range(len(pnts)-1):
-    #             if self.lineIntersectsDatum(pnts[i], pnts[i+1], z_datum):
-    #                 points = self.interpolateZ(pnts[i], pnts[i+1], z_datum)
-    #                 for point in points:
-    #                     out.append((point, face.normal))
-    #     return out
 
     def getSliceEdges(self, layer_index, z_datum):
         ''' Returns a list of edges contained in the slice referenced by the 
         layer_index, which corresponds to the plane located at the z_datum.'''
         out = list()
         facets_in_slice = self.facet_groups[layer_index]
-        for face in facets_in_slice:
+        facets_at_datum = self.findFacetsAtDatum(facets_in_slice, z_datum)
+        for face in facets_at_datum:
             edges = self.getEdgesFromFace(face, z_datum)
-            if edges != None: out.append(edges)
+            if edges != None: out.extend(edges)
         return out
 
     def getEdgesFromFace(self, face: Facet, z_datum):
@@ -163,71 +186,67 @@ class Slicer:
         z_datum'''
         pnts = face.vertices
         intersection_pnts = list()
-        indices = range(len(pnts))
+        indices = [i for i in range(len(pnts))]
         indices.append(0)
-        for i in indices:
-            temp = self.interpolateZ(pnts[i], pnts[i+1], z_datum)
-            if temp != None: intersection_pnts.append(temp)
+        for i in range(len(indices)-1):
+            pnt1 = pnts[indices[i]]
+            pnt2 = pnts[indices[i+1]]
+            if self.lineIntersectsDatum(pnt1, pnt2, z_datum):
+                temp = self.interpolateZ(pnt1, pnt2, z_datum)
+                if temp != None: intersection_pnts.append(temp)
         return intersection_pnts
-        
-    def stitchEdges(self, edges):
-        ''' Organizes all edges into a hull (either convex or concave). Fails if there is
-        self intersecting geometry. Returns a list of points and a list of normals, where
-        the normal[i] correspondes to the normal of the line segment between points[i] and
-        points[i+1]'''
-        next_edge = edges[0]
-        points_out = [next_edge.pnt2]
-        normals_out = list()
-        for i in range(len(edges)):
-            next_pt, next_edge = self.findJoiningPoint(points_out[i], next_edge, edges)
-            points_out.append(next_pt)
-            normals_out.append(next_edge.normal)
-        return points_out, normals_out
 
-    def findJoiningPoint(self, pnt, curr_edge: Edge, edges):
+    def makeHulls(self, edges):
+        ''' Finds connected edges to form a list of closed profiles (hulls) comprised of
+        the edges passed to the function.'''
+        hulls = list()
+        edges = deepcopy(edges)
+        while len(edges) > 0:
+            search_pnt = edges[0].pnt1
+            points_in_hull = [search_pnt]
+            normals_in_hull = list()
+            search_pnt, curr_edge = self.findJoiningPoint(search_pnt, edges)
+            
+            while search_pnt != None:
+                points_in_hull.append(search_pnt)
+                normals_in_hull.append(curr_edge.normal)
+                edges.remove(curr_edge)
+                search_pnt, curr_edge = self.findJoiningPoint(search_pnt, edges)
+            
+            hulls.append(Hull(points_in_hull, normals_in_hull))
+        return hulls
+
+    def findJoiningPoint(self, pnt, edges):
         ''' Parses through edges looking for an edge that has a similar coordinate as
-        "pnt", but is not the exact same edge. Returns the associated point in the new
-        edge as well as the edge.'''
+        "pnt". Returns the associated point in the new edge as well as the edge. Returns
+        None if it cannot find an similar point.'''
         for edge in edges:
-            if edge == curr_edge: continue
             if self.checkSimilarTuples(pnt, edge.pnt1):
                 return edge.pnt2, edge
             elif self.checkSimilarTuples(pnt, edge.pnt2):
                 return edge.pnt1, edge
-        
-    # def formEdgesFromCoordinates(self, slices_points):
-    #     ''' Parses through a list of points in a slice and compiles each point into an
-    #     edge, then adds those edges to a slice, which is appended to a member variable.'''
-    #     self.slices = list()
-    #     for slice_points in slices_points:
-    #         slice_edges = list()
-    #         for i in range(len(slice_points)-1):
-    #             pnt_nrm1 = slice_points[i]
-    #             pnt_nrm2 = slice_points[i+1]
-    #             edge = self.makeEdge(pnt_nrm1, pnt_nrm2)
-    #             if edge != None: slice_edges.append(edge)
-    #         if len(slice_edges) > 0:
-    #             self.slices.append(Slice(slice_edges, self.del_z))
-
-    # def makeEdge(self, point_normal1, point_normal2):
-    #     ''' Creates an Edge from two tuples constructed as (point, normal), where both
-    #     point and normal are (1x3) tuples. If the two points are too close to each other, 
-    #     the function returns None'''
-    #     point1 = point_normal1[0]
-    #     point2 = point_normal2[0]
-    #     if self.checkSimilarTuples(point1, point2): return None
-    #     else: return Edge(point1, point2, point_normal1[1])
-
-    def lineIntersectsDatum(self, pnt1, pnt2, z_datum):
+        return None, None
+                
+    # Service Functions
+    @staticmethod
+    def lineIntersectsDatum(pnt1, pnt2, z_datum):
         ''' Returns true if the line segment connecting pnt1 and pnt2 intersects the 
-        plane at z_datum and parallel to the XY plane'''
+        plane that is located at z_datum and parallel to the XY plane.'''
         if pnt1[2] >= z_datum:
             if pnt2[2] <= z_datum: return True
             else: return False
         if pnt2[2] >= z_datum: return True
         return False
-                
-    # Service Functions
+
+    @staticmethod
+    def faceIntersectsDatum(face: Facet, z_datum):
+        ''' Returns true if the face intersects the plane (even by a vertex) that is
+        located at z_datum and parallel to the XY plane.'''
+        Zpnts = face.getZCoordinates()
+        if min(Zpnts) <= z_datum:
+            if max(Zpnts) >= z_datum: return True
+        return False
+
     @staticmethod
     def interpolateZ(pnt1, pnt2, z_datum):
         ''' Returns the point on the line corresponding to the z_datum. If the line is 
@@ -275,5 +294,3 @@ class Slicer:
                 if vertex[i] < limits[i*2]: limits[i*2] = vertex[i]
                 if vertex[i] > limits[i*2+1]: limits[i*2+1] = vertex[i]
         return limits
-
-# %%

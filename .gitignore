@@ -1,2 +1,2 @@
-# ignore virtual environments
+# ignore virtual environments (named .venv)
 .venv
