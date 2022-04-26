@@ -9,7 +9,7 @@ Authors: William Hawthorne, John Mcadams, John Morris, Rishikesh Reddy Patlolla
 This package is setup to be able to be installed using pip, however, it is not necessary to do so. 
 
 Using Git:
-1. Setup your git branch on your own computer. 
+1. Setup your git repository on your computer. This means that you'll pull all the files from here onto a folder on your computer. You can make changes to this folder, and whatever else you'd like to do. You can also choose to commit those changes back to the main branch so that everyone can see them. You can see more about using git here: https://www.freecodecamp.org/news/git-and-github-for-beginners/
 2. In the root of your branch, setup a virtual environment. You can find out more for setting up a virtual environment by going to this link: https://frankcorso.dev/setting-up-python-environment-venv-requirements.html
 If you name your environment something other than ```.venv``` make sure to add it to the ```.gitignore``` file. The command (on windows) is: 
     ```
