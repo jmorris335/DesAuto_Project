@@ -14,8 +14,9 @@ class TestSliceSTL:
 
     def plot(self):
         for slice in self.slicer.slices:
-            xline, yline, zline = slice.getXYZCoordinates()
-            self.ax.plot3D(xline, yline, zline)
+            for hull in slice.hulls:
+                xline, yline, zline = hull.getXYZCoordinates()
+                self.ax.plot3D(xline, yline, zline)
 
     def align(self, elev, azim, vertical_axis='z'):
         ''' Aligns the axes to the inputted elevation and azimuth. Also

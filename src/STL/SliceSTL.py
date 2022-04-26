@@ -26,6 +26,8 @@ class Hull:
             zcoords.append(point[2])
         return xcoords, ycoords, zcoords
 
+    #FIXME: Add method for getting offset, using centroid
+
 class Slice:
     def __init__(self, hulls):      
         ''' A collection of hulls that define a slice.
@@ -43,9 +45,9 @@ class Slice:
         zcoords = list()
         for hull in self.hulls:
             hull_x, hull_y, hull_z = hull.getXYZCoordinates()
-            xcoords.append(hull_x)
-            ycoords.append(hull_y)
-            zcoords.append(hull_z)
+            xcoords.extend(hull_x)
+            ycoords.extend(hull_y)
+            zcoords.extend(hull_z)
         return xcoords, ycoords, zcoords
 
     #FIXME: Add methods for accessing a certain edge
@@ -145,7 +147,10 @@ class Slicer:
         all_unsorted_edges = self.getEdgesForAllSlices()
         for unsorted_edges in all_unsorted_edges:
             hulls = self.makeHulls(unsorted_edges)
-            self.slices.append(Slice(hulls))
+            if len(hulls) == 0:
+                self.numSlices -= 1
+            else:
+                self.slices.append(Slice(hulls))
 
     def getEdgesForAllSlices(self):
         ''' Returns a list of lists, where each entry corresponds to a list of all the edges 
@@ -193,7 +198,8 @@ class Slicer:
             pnt2 = pnts[indices[i+1]]
             if self.lineIntersectsDatum(pnt1, pnt2, z_datum):
                 temp = self.interpolateZ(pnt1, pnt2, z_datum)
-                if temp != None: intersection_pnts.append(temp)
+                if temp != None: 
+                    intersection_pnts = self.safeAppend(intersection_pnts, temp)
         return intersection_pnts
 
     def makeHulls(self, edges):
@@ -228,10 +234,20 @@ class Slicer:
         return None, None
                 
     # Service Functions
+    def safeAppend(self, pointslist: list, pnt):
+        ''' Appends the pnt to pointslist if the pnt is not previously found in pointslist'''
+        for point in pointslist:
+            if self.checkSimilarTuples(point, pnt):
+                return pointslist
+        pointslist.append(pnt)
+        return pointslist
+
     @staticmethod
-    def lineIntersectsDatum(pnt1, pnt2, z_datum):
+    def lineIntersectsDatum(pnt1, pnt2, z_datum, tol=1e-5):
         ''' Returns true if the line segment connecting pnt1 and pnt2 intersects the 
         plane that is located at z_datum and parallel to the XY plane.'''
+        if abs(pnt1[2] - z_datum) <= tol: return True
+        if abs(pnt2[2] - z_datum) <= tol: return True        
         if pnt1[2] >= z_datum:
             if pnt2[2] <= z_datum: return True
             else: return False
@@ -239,26 +255,25 @@ class Slicer:
         return False
 
     @staticmethod
-    def faceIntersectsDatum(face: Facet, z_datum):
+    def faceIntersectsDatum(face: Facet, z_datum, tol=1e-5):
         ''' Returns true if the face intersects the plane (even by a vertex) that is
         located at z_datum and parallel to the XY plane.'''
         Zpnts = face.getZCoordinates()
+        if abs(min(Zpnts) - z_datum) <= tol: return True
+        if abs(max(Zpnts) - z_datum) <= tol: return True
         if min(Zpnts) <= z_datum:
             if max(Zpnts) >= z_datum: return True
         return False
 
     @staticmethod
-    def interpolateZ(pnt1, pnt2, z_datum):
+    def interpolateZ(pnt1, pnt2, z_datum, tol=1e-5):
         ''' Returns the point on the line corresponding to the z_datum. If the line is 
         contained on the plane parallel to the XY plane and intersecting the z_datum, 
         then the function returns the first point. If the line does not intersect the 
         plane then the function returns None.'''
         m = list()
         for i in range(len(pnt1)): m.append(pnt2[i] - pnt1[i])
-        if m[2] == 0: 
-            if pnt1[2] == z_datum:
-                return pnt1
-            else: return None
+        if abs(m[2]) <= tol: return None
         else: 
             t = (z_datum - pnt1[2]) / m[2]
             x_new = pnt1[0] + t * m[0] 
