@@ -234,3 +234,152 @@ class STL:
             except: continue
             else: out.append(word)
         return out
+
+    # Clipping
+    def clipping(self, windowSize : tuple):
+        """
+        Clips the triangles in self to the given window
+        Input: windowSize: should contain the (x, y, z) dimmensions of the window
+        Output: newSTL: new STL object of the clipped original object
+        """
+        
+        import numpy as np
+
+        newSTL = self
+
+        def addFace():
+            #subfunction to add a new face to the existing STL or make a new one if one hasn't been made yet
+            if (newSTL is self):
+                return STL.emptyCopy(facet = face)
+            else:
+                return newSTL.faces.append(face)
+
+        def CS(p1):
+            #Store Cohen-Sutherland values in 4th index
+            if (p1[0] < 0): p1[3] += 1
+            elif (p1[0] > windowSize[0]): p1[3] += 2
+            if (p1[1] < 0): p1[3] += 4
+            elif (p1[1] > windowSize[1]): p1[3] += 8
+            if (p1[2] < 0): p1[3] += 16
+            elif (p1[2] > windowSize[2]): p1[3] += 32
+            return p1
+
+
+        def pushPoints(push, dir1, dir2, iter = 0):
+            #recursive subfunction that pushes the "push" value into the viewing window in the direction of the points dir1 and dir2. Iter is used to determine which viewing window plane to push into
+
+            if (push[3] == 0):
+                return
+
+            newx1 = newx2 = np.array(push)[0:3]
+            x1 = np.array(dir1)[0:3]
+            x2 = np.array(dir2)[0:3]
+
+            m1 = (x1 - newx1)
+            m2 = x2 - newx2
+
+            nAll = np.array([[0, 0, 1], [1, 0, 0],[0, 1, 0]])
+            n = nAll[iter%3]
+
+            if (newx1[iter%3] < 0):
+                p01 = p02 = np.zeros(3)
+            elif(newx1[iter%3] > windowSize[iter%3]):
+                p01 = p02 = np.array(windowSize)
+            else:
+                if(m1[iter%3] < 0):
+                    p01 = np.zeros(3)
+                else:
+                    p01 = np.array(windowSize)
+                if(m2[iter%3] < 0):
+                    p02 = np.zeros(3)
+                else:
+                    p02 = np.array(windowSize)
+
+
+            if (m1.dot(n) != 0):
+                d = ((p01 - newx1).dot(n))/m1.dot(n)
+                if (0 < d < 1):
+                    newx1 = newx1 + m1 * d
+                    newx1.tolist().append(0)
+                    newx1 = CS(newx1)
+
+            if (m2.dot(n) != 0):
+                d = ((p02 - newx2).dot(n))/m2.dot(n)
+                if (0 < d < 1):
+                    newx2 = newx2 + m2 * d
+                    newx2.tolist().append(0)
+                    newx2 = CS(newx2)
+
+            #recursion to keep pushing until all points are within the viewing window
+            newPoints = []
+
+            if(newx1 == push or newx2 == push):
+                    newPoints.extend(pushPoints(push, x1, x2, iter=iter+1))
+            else:
+                if (newx2[3] != 0):
+                    newPoints.extend(pushPoints(newx2, x2, newx1, iter=iter+1))
+                else:
+                    newPoints.append(newx2)
+                if (newx1[3] != 0):
+                    newPoints.extend(pushPoints(newx1, x1, newx2, iter=iter+1))
+                else:
+                    newPoints.append(newx1)
+
+            return newPoints
+            
+            
+        for face in self.getFacets():
+            verts = face.copyVertices()
+            p1 = verts[0]
+            p2 = verts[1]
+            p3 = verts[2]
+            if (len(p1) < 4):
+                p1.append(0)
+                p2.append(0)
+                p3.append(0)
+
+            
+            #check for clipping and push
+
+            if ((0 < min([p1[0],p2[0],p3[0]])) and (max([p1[0],p2[0],p3[0]]) < windowSize[0]) and \
+                (0 < min([p1[1],p2[1],p3[1]])) and (max([p1[1],p2[1],p3[1]]) < windowSize[1]) and \
+                (0 < min([p1[2],p2[2],p3[2]])) and (max([p1[2],p2[2],p3[2]]) < windowSize[2])):
+                newSTL = addFace()
+                continue
+            elif(max([p1[0],p2[0],p3[0]]) < 0 or min([p1[0],p2[0],p3[0]]) > windowSize[0] or \
+                 max([p1[1],p2[1],p3[1]]) < 0 or min([p1[1],p2[1],p3[1]]) > windowSize[1] or \
+                 max([p1[2],p2[2],p3[2]]) < 0 or min([p1[2],p2[2],p3[2]]) > windowSize[2]):
+                 continue
+            else:
+                p1 = CS(p1)
+                p2 = CS(p2)
+                p3 = CS(p3)
+                if (p1[3] == p2[3] == p3[3] == 0):
+                    newSTL = addFace()
+
+                else:
+                    if (p1[3] != 0):
+                        verts.remove(p1)
+                        verts.append(pushPoints(p1, p2, p3))
+                    if (p2[3] != 0):
+                        verts.remove(p2)
+                        verts.append(pushPoints(p2, p1, p3))
+                    if (p3[3] != 0):
+                        verts.remove(p3)
+                        verts.append(pushPoints(p3, p1, p2))
+
+                    for i in range(1, len(verts)%3 + 2):
+                        Q = np.array(verts[0])
+                        R = np.array(verts[i])
+                        S = np.array(verts[i+1])
+                        QR = R - Q
+                        QS = S - Q
+                        normal = np.cross(QR, QS).toList()
+                        face = STL_Facet(normal, [verts[0], verts[i], verts[i+1]])
+                        newSTL = addFace()
+
+        return newSTL
+
+# %%
+
+

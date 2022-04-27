@@ -22,8 +22,8 @@ class TestSliceSTL:
         orientes the axes so that the vertical axis is vertical to the viewer.'''
         self.ax.view_init(elev, azim, vertical_axis)
 
-    
-# %%
+# %% 
+
 stl = STL("../../Sample STL Files/Eiffel Tower 760.stl")
 slicer = Slicer(stl, 10)
 slicer.sliceSTL()
