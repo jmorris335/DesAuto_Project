@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
 from ReadSTL import STL
+from PlotSTL import PlotSTL
 from SliceSTL import Slicer
 
 class TestSliceSTL:
@@ -26,10 +27,12 @@ class TestSliceSTL:
     
 # %%
 stl = STL("../../Sample STL Files/Eiffel Tower 760.stl")
-slicer = Slicer(stl, 10)
+slicer = Slicer(stl, .1)
 slicer.sliceSTL()
 testSlicer = TestSliceSTL(slicer)
 testSlicer.align(10, 45, 'z')
 testSlicer.plot()
+# plotter = PlotSTL(stl)
+# plotter.plotSTL()
 
 # %%
