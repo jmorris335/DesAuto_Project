@@ -1,2 +1,3 @@
 # ignore virtual environments (named .venv)
 .venv
+src/STL/__pycache__/*

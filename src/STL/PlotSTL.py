@@ -4,8 +4,9 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
-from STL.ReadSTL import STL, STL_Facet as Face
-from STL.Transform import Transform
+from ReadSTL import STL, STL_Facet as Face
+from SliceSTL import Slicer, Slice, Hull
+from Transform import Transform
 
 class PlotSTL(object):
     def __init__(self, stl: STL):
@@ -54,14 +55,14 @@ class PlotSTL(object):
         self.T = Transform(centroid=self.curr_centroid)
         self.orig_centroid = self.curr_centroid
         self.orig_orientation = self.curr_orientation
-        self.alignYZ()
+        self.align(45, 45, 'z')
 
     # Plotting Methods
     def plotSTL(self):
         ''' Plots the STL object on a standard 3D platform'''
         self.setToJustBuildPlate()
         self.plotFaces()
-        self.fitAxes()
+        self.fitToBuildSpace()
         plt.show()
 
     def plotFaces(self):    
@@ -84,11 +85,16 @@ class PlotSTL(object):
         self.ax.add_collection3d(polygon)
 
     # Formatting Methods
+    def clearPlot(self):
+        ''' Resets the axis (clearing any current figures)'''
+        self.ax.clear()
+
     def setToJustBuildPlate(self):
-        ''' Removes all plotting marks except z plane, which is set to gray'''
+        ''' Removes all plotting marks and plots the build plate'''
         self.ax.grid(False)
         self.setAxisLines(on=False)
         self.setBackground()
+        self.plotBuildPlate()
         self.turnOffAxisTicks()
 
     def setAxisLines(self, on: bool):
@@ -100,17 +106,28 @@ class PlotSTL(object):
         self.ax.w_zaxis.line.set_color(color)
 
     def setBackground(self, xplane=(1.0, 1.0, 1.0, 0.0), \
-        yplane=(1.0, 1.0, 1.0, 0.0), zplane=(0.4, 0.4, 0.4, 0.8)):
+        yplane=(1.0, 1.0, 1.0, 0.0), zplane=(1.0, 1.0, 1.0, 0.0)):
         ''' Sets the color of the panes in the 3D plot. The default is
-        to hide the xplane, the yplane, and have the zplane be a
-        transparent grey. The input type for each is (red, green, blue, 
-        alpha)'''
+        to hide all planes. The input type for each is (red, green, blue, 
+        alpha).'''
         self.ax.xaxis.set_pane_color(xplane)
         self.ax.yaxis.set_pane_color(yplane)
         self.ax.zaxis.set_pane_color(zplane)
 
+    def plotBuildPlate(self, width=203.2, depth=152.4):
+        ''' Plots the a flat plane simulating the build plate centered at 
+        the origin.'''
+        vertices = [[(-width/2, -depth/2, 0), (width/2, -depth/2, 0), 
+                    (width/2, depth/2, 0), (-width/2, depth/2, 0)]]
+        polygon = Poly3DCollection(vertices)
+        color = (0.4, 0.4, 0.4, 0.2)
+        polygon.set_facecolor(color) #Set face to grey
+        polygon.set_edgecolor(color) #Set edge to grey
+        # polygon.set_zsort({})
+        self.ax.add_collection3d(polygon, zs=-10)
+
     def turnOffAxisTicks(self):
-        ''' Removes the tick marks from the axes'''
+        ''' Removes the tick marks from the axes.'''
         self.ax.set_xticks([])
         self.ax.set_yticks([])
         self.ax.set_zticks([])
@@ -144,6 +161,13 @@ class PlotSTL(object):
                        ylimit= (min_lim, max_lim), \
                        zlimit= (0, max_lim - min_lim))
 
+    def fitToBuildSpace(self, dim=203.2):
+        ''' Fits the axis to the build space (but squared).'''
+        xylimits = (-dim/2, dim/2)
+        self.setLimits(xlimit= xylimits, \
+                       ylimit= xylimits, \
+                       zlimit= (0, dim))
+
     def align(self, elev, azim, vertical_axis='z'):
         ''' Aligns the axes to the inputted elevation and azimuth. Also
         orientes the axes so that the vertical axis is vertical to the viewer.'''
@@ -158,7 +182,6 @@ class PlotSTL(object):
         self.align(0, 0, 'z')
 
     # Transformation Methods
-    #TODO: Need to make these methods a seperate class: TransformSTL, so that other classes like SliceSTL can access them
     def getCentroid(self):
         x = list()
         y = list()
@@ -228,6 +251,42 @@ class PlotSTL(object):
         self.curr_orientation = self.T.curr_orientation
         self.T = Transform(orientation=self.curr_orientation, centroid=self.curr_centroid)
 
+    # Slicing Methods
+    def sliceAndPlot(self, layer_height=0.2):
+        self.slice(layer_height)
+        self.plotSlicedModel()
+
+    def slice(self, layer_height):
+        self.slicer = Slicer(self.stl, layer_height)
+        self.slicer.sliceSTL()
+
+    def plotSlicedModel(self):
+        self.clearPlot()
+        for i in range(len(self.slicer.slices)):
+            self.plotLayer(i)
+        self.setToJustBuildPlate()
+        self.fitToBuildSpace()
+
+    def plotLayer(self, layer_index, color=(0, 0.6, .13, 0.5)):
+        if layer_index < 0 or layer_index >= len(self.slicer.slices):
+            return
+        slice = self.slicer.slices[layer_index]
+        for hull in slice.hulls:
+            xline, yline, zline = hull.getXYZCoordinates()
+            vertices = [list(zip(xline, yline, zline))]
+            polygon = Poly3DCollection(vertices)
+            polygon.set_facecolor(color) 
+            polygon.set_edgecolor(color)
+            self.ax.add_collection3d(polygon)
+
+    def highlightLayer(self, layer_index, color=(1, 0, 0, 0.8)):
+        self.clearPlot()
+        self.setToJustBuildPlate()
+        self.fitToBuildSpace()
+        for i in range(layer_index):
+            self.plotLayer(i)
+        self.plotLayer(layer_index, color)
+    
     # Service Methods
     def findMaxAndMinLimits(self):
         ''' Finds the highest and lowest vertex along each axis. The output is
