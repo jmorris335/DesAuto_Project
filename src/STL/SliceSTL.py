@@ -1,6 +1,7 @@
 from copy import deepcopy
 from math import floor, ceil
 from ReadSTL import STL, STL_Facet as Facet
+import Methods as mthd
 
 class Edge:
     def __init__(self, pnt1, pnt2, normal):
@@ -11,12 +12,15 @@ class Edge:
         self.normal = normal
 
 class Hull:
-    ''' A closed profile composed of line segments'''
+    ''' A closed profile composed of line segments. The first and last point should 
+    be the same. (FIXME: Needs to be verified).'''
     def __init__(self, points, normals):
         self.pnts = points
         self.normals = normals
 
     def getXYZCoordinates(self):
+        ''' Returns the points in the hull seperated into x, y, and z coordinate 
+        lists.'''
         xcoords = list()
         ycoords = list()
         zcoords = list()
@@ -26,8 +30,16 @@ class Hull:
             zcoords.append(point[2])
         return xcoords, ycoords, zcoords
 
-    #FIXME: Add method for getting offset, using centroid
-
+    def getCentroid(self):
+        ''' Returns the centroid of the hull.'''
+        centroid = [None] * 3
+        x_pnts, y_pnts, z_pnts = self.getXYZCoordinates()
+        for i in range(3):
+            centroid[0] = sum(x_pnts) / len(x_pnts)
+            centroid[1] = sum(y_pnts) / len(y_pnts)
+            centroid[2] = sum(z_pnts) / len(z_pnts)
+        return centroid
+            
 class Slice:
     def __init__(self, hulls):      
         ''' A collection of hulls that define a slice.
@@ -37,7 +49,7 @@ class Slice:
         hulls : list of Hull-type objects
         '''
         self.hulls = hulls
-        self.z_datum = hulls[0].pnts[0][0]
+        self.z_datum = hulls[0].pnts[0][2]
 
     def getXYZCoordinates(self):
         xcoords = list()
@@ -53,7 +65,7 @@ class Slice:
     #FIXME: Add methods for accessing a certain edge
 
 class Slicer:
-    def __init__(self, stl: STL, layer_height):
+    def __init__(self, stl: STL, layer_height, min_z=None, max_z=None):
         ''' Takes an stl object and returns a list of Slice objects, where each
         slice represents a layer of the STL object, sliced in the z-direction.
 
@@ -88,14 +100,21 @@ class Slicer:
         '''
         self.stl = stl
         self.del_z = layer_height
-        limits = self.findMaxAndMinLimits()
-        self.max_z = limits[5]
-        self.min_z = limits[4]
+        self.setSlicingLimits(min_z, max_z)
         self.slices = list()
         self.numSlices = self.findNumOfSlices()
         self.findFacetsAtEachSlice()
 
     # Setup Functions
+    def setSlicingLimits(self, min_z=None, max_z=None):
+        ''' Finds the vertical limits for the sliced stl, or alternatively, allows
+        a caller to set the limits (for use in offset slicing).'''
+        limits = self.findMaxAndMinLimits(self.stl)
+        if min_z != None: self.min_z = min_z
+        else: self.min_z = limits[4]
+        if max_z != None: self.max_z = max_z
+        else: self.max_z = limits[5]
+
     def findNumOfSlices(self):
         ''' Returns the maximum number of slices in the object, including the
         slice at the bottom (z_min) and top (z_max).'''
@@ -175,7 +194,7 @@ class Slicer:
 
     def getEdgesFromFace(self, face: Facet, z_datum):
         ''' Returns a list of edges derived from the intersection of the face with
-        the z_datum plane. Returns none if there are no intersection edges (or if 
+        the z_datum plane. Returns None if there are no intersection edges (or if 
         the face intersects only at a single point).'''
         edges = list()
         coord = self.getIntersectionPointsFromFace(face, z_datum)
@@ -196,17 +215,17 @@ class Slicer:
         for i in range(len(indices)-1):
             pnt1 = pnts[indices[i]]
             pnt2 = pnts[indices[i+1]]
-            if self.lineIntersectsDatum(pnt1, pnt2, z_datum):
-                temp = self.interpolateZ(pnt1, pnt2, z_datum)
+            if mthd.lineIntersectsDatum(pnt1, pnt2, z_datum):
+                temp = mthd.interpolateZ(pnt1, pnt2, z_datum)
                 if temp != None: 
-                    intersection_pnts = self.safeAppend(intersection_pnts, temp)
+                    intersection_pnts = mthd.safeAppend(intersection_pnts, temp)
         return intersection_pnts
 
-    def makeHulls(self, edges):
+    def makeHulls(self, in_edges):
         ''' Finds connected edges to form a list of closed profiles (hulls) comprised of
         the edges passed to the function.'''
         hulls = list()
-        edges = deepcopy(edges)
+        edges = deepcopy(in_edges)
         while len(edges) > 0:
             search_pnt = edges[0].pnt1
             points_in_hull = [search_pnt]
@@ -227,33 +246,13 @@ class Slicer:
         "pnt". Returns the associated point in the new edge as well as the edge. Returns
         None if it cannot find an similar point.'''
         for edge in edges:
-            if self.checkSimilarTuples(pnt, edge.pnt1):
+            if mthd.checkSimilarTuples(pnt, edge.pnt1):
                 return edge.pnt2, edge
-            elif self.checkSimilarTuples(pnt, edge.pnt2):
+            elif mthd.checkSimilarTuples(pnt, edge.pnt2):
                 return edge.pnt1, edge
         return None, None
-                
+
     # Service Functions
-    def safeAppend(self, pointslist: list, pnt):
-        ''' Appends the pnt to pointslist if the pnt is not previously found in pointslist'''
-        for point in pointslist:
-            if self.checkSimilarTuples(point, pnt):
-                return pointslist
-        pointslist.append(pnt)
-        return pointslist
-
-    @staticmethod
-    def lineIntersectsDatum(pnt1, pnt2, z_datum, tol=1e-5):
-        ''' Returns true if the line segment connecting pnt1 and pnt2 intersects the 
-        plane that is located at z_datum and parallel to the XY plane.'''
-        if abs(pnt1[2] - z_datum) <= tol: return True
-        if abs(pnt2[2] - z_datum) <= tol: return True        
-        if pnt1[2] >= z_datum:
-            if pnt2[2] <= z_datum: return True
-            else: return False
-        if pnt2[2] >= z_datum: return True
-        return False
-
     @staticmethod
     def faceIntersectsDatum(face: Facet, z_datum, tol=1e-5):
         ''' Returns true if the face intersects the plane (even by a vertex) that is
@@ -266,44 +265,11 @@ class Slicer:
         return False
 
     @staticmethod
-    def interpolateZ(pnt1, pnt2, z_datum, tol=1e-5):
-        ''' Returns the point on the line corresponding to the z_datum. If the line is 
-        contained on the plane parallel to the XY plane and intersecting the z_datum, 
-        then the function returns the first point. If the line does not intersect the 
-        plane then the function returns None.'''
-        m = list()
-        for i in range(len(pnt1)): m.append(pnt2[i] - pnt1[i])
-        if abs(m[2]) <= tol: return None
-        else: 
-            t = (z_datum - pnt1[2]) / m[2]
-            x_new = pnt1[0] + t * m[0] 
-            y_new = pnt1[1] + t * m[1]
-        return (x_new, y_new, z_datum)
-
-    @staticmethod
-    def isOutOfBounds(coords: list, start, end):
-        ''' Checks if any of the inputted coordinates are outside the boundary
-        defined by start, end.'''
-        for coord in coords:
-            if (coord > start) & (coord < end): return False
-        return True
-
-    @staticmethod
-    def checkSimilarTuples(tuple1, tuple2, tol=0.01):
-        ''' Checks if the coordinates of the two tuples are within a certain tolerance
-        of each other.'''
-        if tuple1 == tuple2: return True
-        if len(tuple1) != len(tuple2): return False
-        err = 0
-        for i in range(len(tuple1)):
-            err += abs(tuple1[i] - tuple2[i])
-        return err <= tol
-
-    def findMaxAndMinLimits(self):
+    def findMaxAndMinLimits(stl: STL):
         ''' Finds the highest and lowest vertex along each axis. The output is
         [xmin, xmax, ymin, ymax, zmin, zmax]'''
         limits = [0, 0, 0, 0, 0, 0]
-        vertices = self.stl.getAllVertices()
+        vertices = stl.getAllVertices()
         for vertex in vertices:
             for i in range(3):
                 if vertex[i] < limits[i*2]: limits[i*2] = vertex[i]

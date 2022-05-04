@@ -1,3 +1,7 @@
 # ignore virtual environments (named .venv)
 .venv
-src/STL/__pycache__/*
+
+# ignore compiled objects
+src/STL/__pycache__/
+*.pyc
+*.pyo

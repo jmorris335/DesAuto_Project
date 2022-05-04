@@ -1,3 +1,4 @@
+from cmath import inf
 import matplotlib.pyplot as plt
 # This import registers the 3D projection, but is otherwise unused.
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
@@ -5,11 +6,25 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
 from ReadSTL import STL, STL_Facet as Face
-from SliceSTL import Slicer, Slice, Hull
+from SliceSTL import Slicer
 from Transform import Transform
+from Extrusion import Extrusion, Path
+
+class Units:
+    def __init__(self):
+        ''' Useful for describing graphical unit conversions. Note that matplotlib
+        uses inches to describe windows, and points to describe element widths. More
+        information available here: 
+        https://matplotlib.org/3.5.0/gallery/subplots_axes_and_figures/figure_size_units.html
+        '''
+        self.px2in = 1/plt.rcParams['figure.dpi'] #px = inch/pixel
+        self.mm2in = .0393701
+        self.in2pt = 72
+        self.mm2px = self.mm2in / self.px2in
+        self.mm2pt = self.mm2in * self.in2pt
 
 class PlotSTL(object):
-    def __init__(self, stl: STL):
+    def __init__(self, stl: STL, figsize: tuple=(800, 600)):
         ''' Container that handles plotting and transformations for an
         STL object.
         
@@ -17,6 +32,9 @@ class PlotSTL(object):
         ---
         stl : STL
             The STL object
+        figsize : (1x2) tuple, default=(800, 600)
+            The size of the resulting figure, in pixels
+
             
         Contents for Calling
         ---
@@ -33,6 +51,14 @@ class PlotSTL(object):
         7. updateSTL() : MUST BE CALLED TO TRANSFORM THE STL AFTER ANOTHER
             TRANSFORMATION METHOD HAS BEEN CALLED
 
+        Sizing
+        ---
+        The figure is set to produce a window size of 800x600 pixels, though this
+        can be changed by calling alternative default parameters. The size of a pixel
+        is used as a base unit in some graphical algorithms, and is based on the DPI of
+        the resulting plot. Normal default DPI (Dots Per Inch) is 100 for matplotlib, 
+        though Jupyter notebooks use 72.
+
         Example
         ---
         ```
@@ -47,8 +73,9 @@ class PlotSTL(object):
         StlPlt.plotSTL() #Plot the STL to the screen
         ```
         '''
+        self.units = Units()
         self.stl = stl
-        self.fig = plt.figure()
+        self.fig = plt.figure(figsize=(figsize[0]*self.units.px2in, figsize[1]*self.units.px2in))
         self.ax = plt.axes(projection='3d')
         self.curr_centroid = self.getCentroid()
         self.curr_orientation = (0, 0, 0)
@@ -56,6 +83,7 @@ class PlotSTL(object):
         self.orig_centroid = self.curr_centroid
         self.orig_orientation = self.curr_orientation
         self.align(45, 45, 'z')
+        self.extruded = False
 
     # Plotting Methods
     def plotSTL(self):
@@ -246,21 +274,26 @@ class PlotSTL(object):
         for face in self.stl.faces:
             A = np.array(face.getMatrix())
             npA = self.T.transform(A)
+            new_normal = self.T.transformNorm(face.normal)
             face.loadFromMatrix(npA.tolist())
+            face.normal = new_normal
         self.curr_centroid = self.T.curr_centroid
         self.curr_orientation = self.T.curr_orientation
         self.T = Transform(orientation=self.curr_orientation, centroid=self.curr_centroid)
 
     # Slicing Methods
     def sliceAndPlot(self, layer_height=0.2):
+        ''' Slices the stl and plots it to the screen.'''
         self.slice(layer_height)
         self.plotSlicedModel()
 
     def slice(self, layer_height):
+        ''' Slices the stl.'''
         self.slicer = Slicer(self.stl, layer_height)
         self.slicer.sliceSTL()
 
     def plotSlicedModel(self):
+        ''' Plot the model (must be called post slicing).'''
         self.clearPlot()
         for i in range(len(self.slicer.slices)):
             self.plotLayer(i)
@@ -268,6 +301,7 @@ class PlotSTL(object):
         self.fitToBuildSpace()
 
     def plotLayer(self, layer_index, color=(0, 0.6, .13, 0.5)):
+        ''' Plots a single layer of the sliced STL.'''
         if layer_index < 0 or layer_index >= len(self.slicer.slices):
             return
         slice = self.slicer.slices[layer_index]
@@ -280,13 +314,49 @@ class PlotSTL(object):
             self.ax.add_collection3d(polygon)
 
     def highlightLayer(self, layer_index, color=(1, 0, 0, 0.8)):
+        '''Plots the model up to a certain layer, then plots the last layer at 
+        layer_index in a different color.'''
         self.clearPlot()
         self.setToJustBuildPlate()
         self.fitToBuildSpace()
         for i in range(layer_index):
             self.plotLayer(i)
         self.plotLayer(layer_index, color)
+
+    # Extrusion Plotting
+    def buildExtrusion(self, wall_thickness=1.5, layer_height=.25, infill_density=.2):
+        ''' Calls and builds the extrusion object.'''
+        self.extrusion = Extrusion(self.stl, wall_thickness, layer_height, infill_density)
+        self.extruded = True
+
+    def plotExtrusion(self, wall_thickness=1.5, layer_height=.25, infill_density=.2):
+        ''' Builds and plots and Extrusion object.'''
+        if not self.extruded: self.buildExtrusion(wall_thickness, layer_height, infill_density)
+        for i in range(self.extrusion.numSlices):
+            self.plotExtrusionSlice(i)
+
+    def plotExtrusionSlice(self, slice_index, color=(.96, 0.4, 0, .6)):
+        ''' Plots all the paths in a slice of the extursion.'''
+        for path in self.extrusion.slices[slice_index]:
+            self.plotPath(path, color)
     
+    def plotPath(self, path: Path, color=(.96, 0.4, 0, .6)):
+        ''' Plots an extruder path to the screen.'''
+        xline, yline, zline = path.getXYZ()
+        lw = self.units.mm2pt * self.extrusion.layer_height
+        self.ax.plot3D(xline, yline, zline, linewidth=lw, color=color)
+
+    def plotExtrudedUptoLayer(self, layer_index, highlight_color=(.32, .18, 0.5, 1)):
+        ''' Plots the extrusion object up to the specified layer.'''
+        if layer_index < 0: layer_index = 0
+        if layer_index >= self.extrusion.numSlices: layer_index = self.extrusion.numSlices - 1
+        self.clearPlot()
+        self.setToJustBuildPlate()
+        self.fitToBuildSpace()
+        for i in range(layer_index):
+            self.plotExtrusionSlice(i)
+        self.plotExtrusionSlice(layer_index, highlight_color)
+        
     # Service Methods
     def findMaxAndMinLimits(self):
         ''' Finds the highest and lowest vertex along each axis. The output is

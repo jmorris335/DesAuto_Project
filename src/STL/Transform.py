@@ -75,6 +75,22 @@ class Transform:
                 A[row] = [el / s for el in A[row,:]]
         return A
 
+    def transformNorm(self, normal):
+        ''' Transforms the normal vector following the equation: 
+        n' = n * transpose(inv(T)). For more information see:
+        https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/transforming-normals
+        
+        Input
+        ---
+        normal : (1x3) list or tuple
+            The normal to be transformed. 
+        '''
+        Tnorm = np.linalg.inv(self.T).T
+        if type(normal) == tuple: normal = list(normal)
+        normal.append(1)
+        normal = normal @ Tnorm
+        return normal[0:3]
+
     def updateOrientation(self, vector: tuple):
         ''' Log a change to the orientation of the object'''
         if len(vector) != 3:

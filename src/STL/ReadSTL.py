@@ -1,4 +1,5 @@
 import copy
+import Methods as mthd
 
 class STL_Facet:
     def __init__(self, normal: list, vertices: list):
@@ -19,19 +20,17 @@ class STL_Facet:
 
     # Modifiers
     def loadFromMatrix(self, A):
-        ''' Sets the normal vector and vertices according to the inputted matrix.
+        ''' Sets vertices according to the inputted matrix.
         
         Inputs
         ---
-        A : [n+1 x 4] or [n+1 x 3] list or np.array
-            A matrix where the first row corresponds to the normal vector and each
-            successive row corresponds to a vertex. Each row can either be in traditional
-            or homogenized coordinates. In homogenized, a row would be [x_val, y_val, z_val, 1]
+        A : [n x 4] or [n x 3] list or np.array
+            A matrix where each successive row corresponds to a vertex. Each row can either be 
+            in traditional or homogenized coordinates. In homogenized, a row would be [x_val, y_val, z_val, 1]
 
         Example: A = [[0, 0, 1, 1], [0, 0, 0, 1], [1, 0, 0, 1], [0, 1, 0, 1]]
         '''
-        self.normal = A[0][0:3]
-        for row in range(1, len(A)):
+        for row in range(len(A)):
             self.vertices[row-1] = A[row][0:3]
 
     # Access Functions
@@ -47,7 +46,6 @@ class STL_Facet:
         ''' Returns the normal vector and vertices for the face as a [nx4] matrix suitable
         for transformations in a homogenized coordinate system.'''
         matrix = list()
-        matrix.append(self.homogenize(self.normal))
         for vertex in self.vertices:
             matrix.append(self.homogenize(vertex))
         return matrix
@@ -190,9 +188,17 @@ class STL:
 
     def parseFacetLoop(self, facet_loop: list):
         ''' Returns the normal vector and verticies contained in the facet_loop'''
-        normal = self.getNormal(facet_loop)
+        # normal = self.getNormal(facet_loop)
         vertices = self.getVertices(facet_loop)
+        normal = self.calcNormal(vertices)
         return STL_Facet(normal, vertices)
+
+    def calcNormal(self, vertices):
+        ''' Calculates the normal based on the facet vertices'''
+        pnt1 = vertices[0]
+        pnt2 = vertices[1]
+        pnt3 = vertices[2]
+        return mthd.calculateNormal(pnt1, pnt2, pnt3)
 
     def getNormal(self, facet_loop: list):
         ''' Returns the normal vector in the inputted facet lines'''
@@ -233,4 +239,36 @@ class STL:
                 word = line[indices[i] : indices[i+1]]
             except: continue
             else: out.append(word)
+        return out
+
+    # Offset Functions
+    def getOffsetSTL(self, offset):
+        ''' Returns a similar STL where each point has been offset by the specified value.
+        Negative offset values result in inwards (reduced) offsets.'''
+        out = self.emptyCopy()
+        for face in self.faces:
+            out_pnts = list()
+            for pnt in face.vertices:
+                dir = self.getOffsetNormal(pnt, offset)
+                out_pnts.append(mthd.sumVectors([pnt, dir]))
+            out.faces.append(STL_Facet(face.normal, out_pnts))
+        return out
+
+    def getOffsetNormal(self, point, offset):
+        ''' Finds the direction of offsetting for a specified point by taking the sum of 
+        the normalized normals for all the edges connected to the point.'''
+        normals = self.getConnectedNormals(point)
+        sum_normal = mthd.sumVectors(normals)
+        dir = mthd.normalizeVector(sum_normal)
+        dir = [dir[i] * offset for i in range(len(dir))]
+        return dir
+    
+    def getConnectedNormals(self, point):
+        ''' Returns a list of the normals for all faces that contain the specifed point'''
+        out = list()
+        for face in self.faces:
+            for pnt in face.vertices:
+                if mthd.checkSimilarTuples(pnt, point):
+                    out.append(face.normal)
+                    continue
         return out
