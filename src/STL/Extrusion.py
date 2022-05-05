@@ -37,6 +37,16 @@ class Path:
             z.append(pnt[2])
         return x, y, z
 
+    @staticmethod
+    def toLine(point, extrude: True):
+        return '\tX' + point[0] + '\tY' + point[1] + '\tZ' + point[2]
+
+    def toString(self):
+        ''' Returns an output of the path in two lines.'''
+        line1 = self.toLine(self.points[0], True) + '\n'
+        line2 = self.toLine(self.points[1], False)
+        return line1 + line2
+
 class Extrusion:
     def __init__(self, stl: STL, wall_thickness=1.5, layer_height=0.25, infill_density=0.2):
         ''' An object that takes an STL and calculates the necessary paths an
