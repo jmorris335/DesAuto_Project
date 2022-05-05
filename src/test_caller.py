@@ -29,5 +29,6 @@ print(testObj.toString())
 # print(emptyCopy.toString())
 
 # Test 4: Clipping
-clipped = clipping(testObj, (0, 11, 4))
+clipped = clipping(testObj, (20, 20, 4))
 print(clipped.toString())
+PlotSTL(clipped).plotSTL()
