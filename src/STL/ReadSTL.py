@@ -189,6 +189,8 @@ class STL:
     def parseFacetLoop(self, facet_loop: list):
         ''' Returns the normal vector and verticies contained in the facet_loop'''
         # normal = self.getNormal(facet_loop)
+        # The function getNormal returns the normal in the file, which may not be 
+        # accurate. calcNormal is used instead.
         vertices = self.getVertices(facet_loop)
         normal = self.calcNormal(vertices)
         return STL_Facet(normal, vertices)
@@ -239,36 +241,4 @@ class STL:
                 word = line[indices[i] : indices[i+1]]
             except: continue
             else: out.append(word)
-        return out
-
-    # Offset Functions
-    def getOffsetSTL(self, offset):
-        ''' Returns a similar STL where each point has been offset by the specified value.
-        Negative offset values result in inwards (reduced) offsets.'''
-        out = self.emptyCopy()
-        for face in self.faces:
-            out_pnts = list()
-            for pnt in face.vertices:
-                dir = self.getOffsetNormal(pnt, offset)
-                out_pnts.append(mthd.sumVectors([pnt, dir]))
-            out.faces.append(STL_Facet(face.normal, out_pnts))
-        return out
-
-    def getOffsetNormal(self, point, offset):
-        ''' Finds the direction of offsetting for a specified point by taking the sum of 
-        the normalized normals for all the edges connected to the point.'''
-        normals = self.getConnectedNormals(point)
-        sum_normal = mthd.sumVectors(normals)
-        dir = mthd.normalizeVector(sum_normal)
-        dir = [dir[i] * offset for i in range(len(dir))]
-        return dir
-    
-    def getConnectedNormals(self, point):
-        ''' Returns a list of the normals for all faces that contain the specifed point'''
-        out = list()
-        for face in self.faces:
-            for pnt in face.vertices:
-                if mthd.checkSimilarTuples(pnt, point):
-                    out.append(face.normal)
-                    continue
         return out

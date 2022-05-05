@@ -135,10 +135,18 @@ class Slicer:
         self.facet_groups = [list() for i in range(self.numSlices+1)]
         for face in self.stl.faces:
             indices = self.findSlicesCoveredByFace(face)
-            for index in indices: 
-                self.facet_groups[index].append(face)
+            for index in indices:
+                #FIXME: Remove try-catch block
+                try:
+                    self.facet_groups[index].append(face)
+                except:
+                    print('facet groups: ', self.facet_groups)
+                    print('index: ', index)
+                    print('indices: ', indices)
+                    print('face v: ', face.vertices)
+                    exit()
 
-    def findSlicesCoveredByFace(self, facet: Facet):
+    def findSlicesCoveredByFace(self, facet: Facet, tol=1e-5):
         ''' Returns a the range of indices to which slices contain the given facet. The list
         corresponds with the faces in stl.faces. Note that the indices start at 0
         for the bottom slice (at z_min), and end with numSlices - 1 for the top slice 
@@ -146,7 +154,7 @@ class Slicer:
         zcoord = facet.getZCoordinates()
         starting_index = floor((min(zcoord) - self.min_z) / self.del_z)
         ending_index = ceil((max(zcoord) - self.min_z) / self.del_z)
-        if max(zcoord) == self.max_z and self.additionalSliceOnTop: 
+        if abs(max(zcoord) - self.max_z) < tol and self.additionalSliceOnTop: 
             ending_index += 1
         return range(starting_index, ending_index)
 

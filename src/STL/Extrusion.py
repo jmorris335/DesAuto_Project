@@ -2,7 +2,15 @@ from math import floor
 
 from ReadSTL import STL
 from SliceSTL import Slicer, Hull, Slice
+from Offset import getOffsetSTL
 import Methods as mthd
+
+'''
+Status: This class creates a grid infill properly, and makes paths for the outer
+hulls correctly. It requires the offset module functionality to be finished before 
+it can create the border walls effectively. At that point it will use the offset 
+functionality to create the solid-infill border walls. -JM, 5 May 2022
+'''
 
 class Path:
     def __init__(self, points):
@@ -55,12 +63,13 @@ class Extrusion:
         self.layer_height = layer_height
         self.density = abs(infill_density) if abs(infill_density) <= 1 else 1
         self.numWalls = int(wall_thickness / layer_height)
+        self.numWalls = 1 #FIXME: This prevents offsetting until that functionality is established
         self.printing_speed = 25.4 #mm/s
         self.length_of_print = 0
         self.time_to_print = 0
         self.setupSlices()
         self.findInfillCoord()
-        # self.makeBorderWalls()
+        self.makeBorderWalls()
         self.makeInfill()
 
     def setupSlices(self):
@@ -132,15 +141,15 @@ class Extrusion:
             for slice in temp.slices:
                 self.addSliceHulls(slice)
             if i != self.numWalls-1: 
-                self.innerSTL = temp.stl.getOffsetSTL(self.layer_height)
+                self.innerSTL = getOffsetSTL(temp.stl, -self.layer_height/2)
             self.slicedSTL = temp
 
     def makeInfill(self):
         ''' Caller function to make the infill paths for each slice in the object.'''
         # Delete below if uncommenting self.makeBorderWalls()
-        temp = Slicer(self.innerSTL, self.layer_height)
-        temp.sliceSTL()
-        self.slicedSTL = temp
+        # temp = Slicer(self.innerSTL, self.layer_height)
+        # temp.sliceSTL()
+        # self.slicedSTL = temp
         # Delete above
         for slice in self.slicedSTL.slices:
             for hull in slice.hulls:
@@ -201,7 +210,7 @@ class Extrusion:
         m = (pnt2[1] - pnt1[1]) / (pnt2[0] - pnt1[0])
         if is_horizontal:
             if not mthd.horizontalIntersectsLineSeg(line_c, [pnt1, pnt2]): return None
-            return (m * (line_c - pnt1[1]) - pnt1[0], line_c, z)
+            return ((line_c - pnt1[1]) / m + pnt1[0], line_c, z)
         else:
             if not mthd.verticalIntersectsLineSeg(line_c, [pnt1, pnt2]): return None
             return (line_c, m * (line_c - pnt1[0]) + pnt1[1], z)
@@ -213,6 +222,3 @@ def calcInfillData(layer_height, density, side=1000):
     spacing = (side - layer_height * num_lines) / (num_lines + 1)
     spacing = round(spacing, 3)
     return spacing
-
-# stl = STL("Sample STL Files/Eiffel Tower 760.stl")
-# ext = Extrusion(stl)

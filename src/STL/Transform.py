@@ -88,8 +88,8 @@ class Transform:
         Tnorm = np.linalg.inv(self.T).T
         if type(normal) == tuple: normal = list(normal)
         normal.append(1)
-        normal = normal @ Tnorm
-        return normal[0:3]
+        out = normal @ Tnorm
+        return out.tolist()[0:3]
 
     def updateOrientation(self, vector: tuple):
         ''' Log a change to the orientation of the object'''

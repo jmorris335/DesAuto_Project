@@ -16,6 +16,14 @@ def checkSimilarTuples(tuple1, tuple2, tol=0.01):
         err += abs(tuple1[i] - tuple2[i])
     return err <= tol
 
+def checkSimilarVectors(v1, v2, tol=0.1):
+    ''' Checks if the vectors are collinear.'''
+    if v1 == v2: return True
+    if len(v1) != len(v2): return False
+    dot = np.dot(np.array(v1), np.array(v2))
+    cos = dot / euclidianDistance(v1) / euclidianDistance(v2)
+    return abs(1 - cos) < tol or abs(-1 - cos) < tol
+
 def lineIntersectsDatum(pnt1, pnt2, z_datum, tol=1e-5):
     ''' Returns true if the line segment connecting pnt1 and pnt2 intersects the 
     plane that is located at z_datum and parallel to the XY plane.'''
@@ -64,6 +72,17 @@ def sumVectors(vectors: list):
         out[i] = sum(vector[i] for vector in vectors)
     return out
 
+def cleanDuplicates(vectors: list, tol=.01):
+    ''' Removes duplicates in vectors'''
+    out = list()
+    for a in vectors:
+        for b in out:
+            if checkSimilarVectors(a, b, tol): 
+                break
+        else:
+            out.append(a)
+    return out
+
 def safeAppend(pointslist: list, pnt):
     ''' Appends the pnt to pointslist if the pnt is not previously found in pointslist'''
     for point in pointslist:
@@ -72,7 +91,7 @@ def safeAppend(pointslist: list, pnt):
     pointslist.append(pnt)
     return pointslist
 
-def euclidianDistance(pnt1, pnt2):
+def euclidianDistance(pnt1, pnt2=(0,0,0)):
     ''' Returns the euclidian (geometric) distance between the two points.'''
     distance = 0
     for i in range(min([len(pnt1), len(pnt2)])):
@@ -137,12 +156,10 @@ def calculateNormal(pnt1, pnt2, pnt3):
     ''' Returns the normal to the plane composed of the 3 inputted points.
     The points should be oriented CCW to each other (following the RH Rule).
     Note that the returned vector is normalized.'''
-    q = np.array(pnt1)
-    r = np.array(pnt2)
-    s = np.array(pnt3)
-    qr = q - r
-    qs = q - s
+    qr = np.array(pnt1) - np.array(pnt2)
+    qs = np.array(pnt1) - np.array(pnt3)
     out = np.cross(qr, qs)
-    if max(out) == 0: return out
-    return out / max(out)
-    
+    temp = abs(max(out)) if abs(max(out)) > abs(min(out)) else abs(min(out))
+    if temp == 0: return out.tolist()
+    out = out / temp
+    return out.tolist()

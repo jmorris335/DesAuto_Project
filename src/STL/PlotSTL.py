@@ -262,11 +262,12 @@ class PlotSTL(object):
         self.translate(delz=-zmin)
 
     def moveToCenter(self):
-        ''' Moves the STL to the vertical center of the screen (along y-axis only)'''
+        ''' Moves the STL to the center of the screen'''
         # ylim = plt.gca().get_ylim()
         # y_center = (ylim[1] - ylim[0]) / 2 + ylim[0]
         dely = 0 - self.curr_centroid[1]
-        self.translate(dely=dely)
+        delx = 0 - self.curr_centroid[0]
+        self.translate(delx=delx, dely=dely)
 
     def updateSTL(self):
         ''' Applies the transformations encoded in self.T to the STL vertices, then 
