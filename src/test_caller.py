@@ -7,7 +7,7 @@ from STL.ReadSTL import STL
 from STL.PlotSTL import PlotSTL
 
 # Test 1: Load and Create Object
-testObj = STL("..\..\Sample STL Files\House4 106.stl")
+testObj = STL("Sample STL Files\House4 106.stl")
 print(testObj.toString())
 
 # # Test 2: Plot and rotate STL
@@ -27,6 +27,6 @@ print(testObj.toString())
 
 # Test 4: Clipping
 # %%
-clippedSTL = testObj.clipping((2, 3, 2))
+clippedSTL = testObj.clipping((0, 0, 0))
 plottedClipped = PlotSTL(clippedSTL)
 plottedClipped.plotSTL()

@@ -244,15 +244,16 @@ class STL:
         """
         
         import numpy as np
-
+        debugIter = 0
         newSTL = self
 
         def addFace():
             #subfunction to add a new face to the existing STL or make a new one if one hasn't been made yet
             if (newSTL is self):
-                return STL.emptyCopy(facet = face)
+                return STL.emptyCopy(newSTL, facet = face)
             else:
-                return newSTL.faces.append(face)
+                newSTL.faces.append(face)
+                return newSTL
 
         def CS(p1):
             #Store Cohen-Sutherland values in 4th index
@@ -265,70 +266,56 @@ class STL:
             return p1
 
 
-        def pushPoints(push, dir1, dir2, iter = 0):
-            #recursive subfunction that pushes the "push" value into the viewing window in the direction of the points dir1 and dir2. Iter is used to determine which viewing window plane to push into
+        def pushPoints(p0, p1, iter):
+            #recursive function that pushes p0 in the direction of p1 until it is within the viewing window
+            """
+            Inputs:
+            p0 = numpy vector of a point that needs to be pushing inbounds
+            p1 = numpy vector of a point that defines the direction of push
+            iter = iterator that represents which dimmension we're focusing on (x, y, z)
+            
+            Outputs:
+            a numpy vector
+            """
+            if (p0[3] == 0):
+                return p0
+            iter = iter % 3
+            newp = p0[0:3]
+            dir = p1[0:3]
+            m = dir - newp
+            n = np.array([[1, 0, 0],[0, 1, 0],[0, 0, 1]])[iter]
 
-            if (push[3] == 0):
-                return
-
-            newx1 = newx2 = np.array(push)[0:3]
-            x1 = np.array(dir1)[0:3]
-            x2 = np.array(dir2)[0:3]
-
-            m1 = (x1 - newx1)
-            m2 = x2 - newx2
-
-            nAll = np.array([[0, 0, 1], [1, 0, 0],[0, 1, 0]])
-            n = nAll[iter%3]
-
-            if (newx1[iter%3] < 0):
-                p01 = p02 = np.zeros(3)
-            elif(newx1[iter%3] > windowSize[iter%3]):
-                p01 = p02 = np.array(windowSize)
+            if (newp[iter] < 0):
+                p01 = np.zeros(3)
+            elif (newp[iter] > windowSize[iter]):
+                p01 = np.array(windowSize)
             else:
-                if(m1[iter%3] < 0):
+                if (m[iter] < 0):
                     p01 = np.zeros(3)
                 else:
                     p01 = np.array(windowSize)
-                if(m2[iter%3] < 0):
-                    p02 = np.zeros(3)
-                else:
-                    p02 = np.array(windowSize)
+
+            if (m.dot(n) != 0):
+                d = ((p01 - newp).dot(n))/m.dot(n)
+                if (0 < d <= 1):
+                    newp = newp + m * d
+            newp = CS(np.hstack([newp, 0]))
+            return newp
 
 
-            if (m1.dot(n) != 0):
-                d = ((p01 - newx1).dot(n))/m1.dot(n)
-                if (0 < d < 1):
-                    newx1 = newx1 + m1 * d
-                    newx1.tolist().append(0)
-                    newx1 = CS(newx1)
+        def uniqueRowOrdered(arr):
+            #takes input numpy array and outputs new numpy array without duplicates, removing the second duplicate
+            newArr = []
+            arr = arr.tolist()
+            for row in arr:
+                if row not in newArr:
+                    newArr.append(row)
+            return np.array(newArr)
 
-            if (m2.dot(n) != 0):
-                d = ((p02 - newx2).dot(n))/m2.dot(n)
-                if (0 < d < 1):
-                    newx2 = newx2 + m2 * d
-                    newx2.tolist().append(0)
-                    newx2 = CS(newx2)
-
-            #recursion to keep pushing until all points are within the viewing window
-            newPoints = []
-
-            if(newx1 == push or newx2 == push):
-                    newPoints.extend(pushPoints(push, x1, x2, iter=iter+1))
-            else:
-                if (newx2[3] != 0):
-                    newPoints.extend(pushPoints(newx2, x2, newx1, iter=iter+1))
-                else:
-                    newPoints.append(newx2)
-                if (newx1[3] != 0):
-                    newPoints.extend(pushPoints(newx1, x1, newx2, iter=iter+1))
-                else:
-                    newPoints.append(newx1)
-
-            return newPoints
             
             
         for face in self.getFacets():
+            debugIter += 1
             verts = face.copyVertices()
             p1 = verts[0]
             p2 = verts[1]
@@ -339,16 +326,16 @@ class STL:
                 p3.append(0)
 
             
-            #check for clipping and push
+            #check if the face is entirely inside or outside the viewing window
 
-            if ((0 < min([p1[0],p2[0],p3[0]])) and (max([p1[0],p2[0],p3[0]]) < windowSize[0]) and \
-                (0 < min([p1[1],p2[1],p3[1]])) and (max([p1[1],p2[1],p3[1]]) < windowSize[1]) and \
-                (0 < min([p1[2],p2[2],p3[2]])) and (max([p1[2],p2[2],p3[2]]) < windowSize[2])):
+            if ((0 <= round(min([p1[0],p2[0],p3[0]])), 8) and (round(max([p1[0],p2[0],p3[0]]), 8) <= windowSize[0]) and \
+                (0 <= round(min([p1[1],p2[1],p3[1]])), 8) and (round(max([p1[1],p2[1],p3[1]]), 8) <= windowSize[1]) and \
+                (0 <= round(min([p1[2],p2[2],p3[2]])), 8) and (round(max([p1[2],p2[2],p3[2]]), 8) <= windowSize[2])):
                 newSTL = addFace()
                 continue
-            elif(max([p1[0],p2[0],p3[0]]) < 0 or min([p1[0],p2[0],p3[0]]) > windowSize[0] or \
-                 max([p1[1],p2[1],p3[1]]) < 0 or min([p1[1],p2[1],p3[1]]) > windowSize[1] or \
-                 max([p1[2],p2[2],p3[2]]) < 0 or min([p1[2],p2[2],p3[2]]) > windowSize[2]):
+            elif(round(max([p1[0],p2[0],p3[0]]), 8) < 0 or round(min([p1[0],p2[0],p3[0]]), 8) > windowSize[0] or \
+                 round(max([p1[1],p2[1],p3[1]]), 8) < 0 or round(min([p1[1],p2[1],p3[1]]), 8) > windowSize[1] or \
+                 round(max([p1[2],p2[2],p3[2]]), 8) < 0 or round(min([p1[2],p2[2],p3[2]]), 8) > windowSize[2]):
                  continue
             else:
                 p1 = CS(p1)
@@ -356,25 +343,52 @@ class STL:
                 p3 = CS(p3)
                 if (p1[3] == p2[3] == p3[3] == 0):
                     newSTL = addFace()
-
                 else:
-                    if (p1[3] != 0):
-                        verts.remove(p1)
-                        verts.append(pushPoints(p1, p2, p3))
-                    if (p2[3] != 0):
-                        verts.remove(p2)
-                        verts.append(pushPoints(p2, p1, p3))
-                    if (p3[3] != 0):
-                        verts.remove(p3)
-                        verts.append(pushPoints(p3, p1, p2))
+                    
+                    #push points one at a time in one direction at a time and create new faces to add to the stl
+                    length = 3
+                    vertArray = np.array(verts)
+                    i = j = 0 #i is for indexing the vertices, j is to prevent infinite while loop
+                    while ( i//length < 3 and j < 100 and any(vertArray[:,3] !=0)):
+                        length = len(vertArray)
+                        iter = i % length
+                        if (vertArray[iter,3] != 0):
+                            if (iter == 0):
+                                newPoints = np.vstack([pushPoints(vertArray[0,:], vertArray[-1,:], i//length), pushPoints(vertArray[0,:], vertArray[1,:], i//length)])
+                                vertArray = np.vstack([vertArray[1:length], newPoints])
+                                i = i - 1
+                            elif((i % length) == (length - 1)):
+                                newPoints = np.vstack([pushPoints(vertArray[iter,:], vertArray[iter - 1,:], i//length), pushPoints(vertArray[iter,:], vertArray[0,:], i//length)])
+                                vertArray = np.vstack([vertArray[0:length - 1], newPoints])
+                            else:
+                                newPoints = np.vstack([pushPoints(vertArray[iter,:], vertArray[iter - 1,:], i//length), pushPoints(vertArray[iter,:], vertArray[iter + 1,:], i//length)])
+                                vertArray = np.vstack([vertArray[0:iter], newPoints, vertArray[iter + 1:length]])
+                                
+                            vertArray = uniqueRowOrdered(vertArray)
+                        
+                        i = (i + 1)
+                        
+                        j += 1
+                    
+                    
+                    #skip non-triangles
+                    vertArray = vertArray[vertArray[:,3] == 0, 0:3]
+                    if (len(vertArray) < 3):
+                        continue
+                    
+                    #calculate normal (which should be the same for each new triangle in the polygon)
+                    verts = vertArray.tolist()
+                    Q = np.array(verts[0])
+                    R = np.array(verts[1])
+                    S = np.array(verts[2])
+                    QR = R - Q
+                    QS = S - Q
+                    normal = np.cross(QR, QS)
+                    normal = np.around(normal / (np.sqrt(normal.dot(normal))), decimals = 6) #normalizes vector
+                    normal = normal.tolist()
 
+                    #create the new faces and add them to the new STL that gets outputed
                     for i in range(1, len(verts)%3 + 2):
-                        Q = np.array(verts[0])
-                        R = np.array(verts[i])
-                        S = np.array(verts[i+1])
-                        QR = R - Q
-                        QS = S - Q
-                        normal = np.cross(QR, QS).toList()
                         face = STL_Facet(normal, [verts[0], verts[i], verts[i+1]])
                         newSTL = addFace()
 
