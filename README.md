@@ -22,3 +22,14 @@ If you name your environment something other than ```.venv``` make sure to add i
     (.venv) (path)> python -m pip install -r requirements.txt
     ```
 5. Check that everything was installed correctly by running the ```test_caller.py``` file in the ```src\``` directory.
+
+6. If you add more dependencies to the project, make sure to run ```pip freeze > requirements.txt``` to save it to the requirements.txt file.
+
+### To Build Project
+You'll have to build the project if you want to distribute it. Building is OS specific, so it will only work on the OS of the computer you build on, but then it can be shared as an executable to anyone running that OS.
+
+1. Make sure you have pyinstaller installed using pip.
+
+2. Run ```pyinstaller cli.spec``` into the terminal. This will create a ```dist``` directory that will contain the single executable.
+
+3. Note that the project will follow the path in ```cli.py```, which calls ```src/__main__.py```. So put the script you want to be run by the executable in there.

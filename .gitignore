@@ -5,3 +5,7 @@
 src/STL/__pycache__/
 *.pyc
 *.pyo
+
+# ignore built environments
+build/
+dist/
