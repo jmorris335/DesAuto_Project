@@ -5,10 +5,10 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
-from ReadSTL import STL, STL_Facet as Face
-from SliceSTL import Slicer
-from Transform import Transform
-from Extrusion import Extrusion, Path
+from STL.ReadSTL import STL, STL_Facet as Face
+from STL.SliceSTL import Slicer
+from STL.Transform import Transform
+from STL.Extrusion import Extrusion, Path
 
 class Units:
     def __init__(self):

@@ -1,9 +1,9 @@
 from math import floor
 
-from ReadSTL import STL
-from SliceSTL import Slicer, Hull, Slice
-from Offset import getOffsetSTL
-import Methods as mthd
+from STL.ReadSTL import STL
+from STL.SliceSTL import Slicer, Hull, Slice
+from STL.Offset import getOffsetSTL
+import STL.Methods as mthd
 
 '''
 Status: This class creates a grid infill properly, and makes paths for the outer
@@ -45,7 +45,7 @@ class Path:
         ''' Returns an output of the path in two lines.'''
         line1 = self.toLine(self.points[0], True) + '\n'
         line2 = self.toLine(self.points[1], False)
-        return line1 + line2
+        return line1, line2
 
 class Extrusion:
     def __init__(self, stl: STL, wall_thickness=1.5, layer_height=0.25, infill_density=0.2):

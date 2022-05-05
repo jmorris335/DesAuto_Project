@@ -1,7 +1,7 @@
 from copy import deepcopy
 from math import floor, ceil
-from ReadSTL import STL, STL_Facet as Facet
-import Methods as mthd
+from STL.ReadSTL import STL, STL_Facet as Facet
+import STL.Methods as mthd
 
 class Edge:
     def __init__(self, pnt1, pnt2, normal):
