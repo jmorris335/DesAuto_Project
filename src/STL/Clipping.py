@@ -96,7 +96,7 @@ def clipping(stl: STL, windowSize : tuple):
         if ((0 <= round(min([p1[0],p2[0],p3[0]])), 8) and (round(max([p1[0],p2[0],p3[0]]), 8) <= windowSize[0]) and \
             (0 <= round(min([p1[1],p2[1],p3[1]])), 8) and (round(max([p1[1],p2[1],p3[1]]), 8) <= windowSize[1]) and \
             (0 <= round(min([p1[2],p2[2],p3[2]])), 8) and (round(max([p1[2],p2[2],p3[2]]), 8) <= windowSize[2])):
-            newSTL = addFace()
+            newSTL = addFace(face)
             continue
         elif(round(max([p1[0],p2[0],p3[0]]), 8) < 0 or round(min([p1[0],p2[0],p3[0]]), 8) > windowSize[0] or \
                 round(max([p1[1],p2[1],p3[1]]), 8) < 0 or round(min([p1[1],p2[1],p3[1]]), 8) > windowSize[1] or \
@@ -107,7 +107,7 @@ def clipping(stl: STL, windowSize : tuple):
             p2 = CS(p2)
             p3 = CS(p3)
             if (p1[3] == p2[3] == p3[3] == 0):
-                newSTL = addFace()
+                newSTL = addFace(face)
             else:
                 
                 #push points one at a time in one direction at a time and create new faces to add to the stl
