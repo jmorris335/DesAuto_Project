@@ -4,8 +4,9 @@ from STL.ReadSTL import STL, STL_Facet
 
 def clipping(stl: STL, windowSize : tuple):
     """
-    Clips the triangles in self to the given window
-    Input: windowSize: should contain the (x, y, z) dimmensions of the window
+    Clips the triangles in STL to the given window
+    Input: STL: an STL object from STL.ReadSTL that will be clipped
+           windowSize: tuple containing the max (x, y, z) dimmensions of the window
     Output: newSTL: new STL object of the clipped original object
     """
     

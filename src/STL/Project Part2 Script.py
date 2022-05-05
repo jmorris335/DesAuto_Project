@@ -19,7 +19,7 @@ stl_file = 'Simple 8.stl'
 cur_path = os.path.dirname(__file__)
 stl_filepath = os.path.join(cur_path, '..', 'Sample STL Files', stl_file)
 
-slicing_interval = .2 #mm
+slicing_interval = .25 #mm
 
 #1. load the STL
 stl = STL(file = stl_filepath)
@@ -36,7 +36,7 @@ buildSTL = PlotSTL(stl)
 buildSTL.T = T
 buildSTL.updateSTL()
 
-buildSTL.stl = clipping(buildSTL.stl)
+buildSTL.stl = clipping(buildSTL.stl, build_plate_dimm)
 
 #3. display the model
 """Currently there is no GUI so I will use MatPlotLib to plot the resulting model"""
@@ -44,3 +44,8 @@ buildSTL.plotSTL()
 
 #4. slice the model according to slicing interval (user set)
 slices = Slicer(buildSTL.stl, slicing_interval, 0, build_plate_dimm[2])
+
+#5. create a tab-deliminated .txt file of 6 slices equally spaced throught the part
+txt_file_name = stl_file[0:-4] + '_slices.txt'
+txt_filepath = os.path.join(txt_file_name)
+f = open(txt_filepath, 'w')
