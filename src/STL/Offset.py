@@ -1,5 +1,5 @@
-from STL.ReadSTL import STL, STL_Facet
-import STL.Methods as mthd
+from src.STL.ReadSTL import STL, STL_Facet
+import src.STL.Methods as mthd
 import numpy as np
 
 '''Set of functions for generating an offset.

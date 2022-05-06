@@ -1,9 +1,9 @@
 from math import floor
 
-from STL.ReadSTL import STL
-from STL.SliceSTL import Slicer, Hull, Slice
-from STL.Offset import getOffsetSTL
-import STL.Methods as mthd
+from src.STL.ReadSTL import STL
+from src.STL.SliceSTL import Slicer, Hull, Slice
+from src.STL.Offset import getOffsetSTL
+import src.STL.Methods as mthd
 
 '''
 Status: This class creates a grid infill properly, and makes paths for the outer

@@ -1,5 +1,5 @@
 import copy
-import STL.Methods as mthd
+import src.STL.Methods as mthd
 
 class STL_Facet:
     def __init__(self, normal: list, vertices: list):

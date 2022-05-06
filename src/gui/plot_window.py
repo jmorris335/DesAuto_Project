@@ -4,18 +4,18 @@ from tkinter import filedialog
 from PIL import ImageTk, Image
 import os
 
-from gui.ortho_widget import tkOrtho_Widget
-from gui.translate_widget import tkTranslate_Widget
-from gui.rotation_widget import tkRotate_Widget
-from gui.mode_widget import tkMode_Widget
-from gui.param_widget import tkParam_Widget
-from gui.alignment_widget import tkAlign_Widget
-from gui.zoom_widget import tkZoom_Widget
-from gui.pan_widget import tkPan_Widget
-from gui.scale_widget import tkScale_Widget
+from src.gui.ortho_widget import tkOrtho_Widget
+from src.gui.translate_widget import tkTranslate_Widget
+from src.gui.rotation_widget import tkRotate_Widget
+from src.gui.mode_widget import tkMode_Widget
+from src.gui.param_widget import tkParam_Widget
+from src.gui.alignment_widget import tkAlign_Widget
+from src.gui.zoom_widget import tkZoom_Widget
+from src.gui.pan_widget import tkPan_Widget
+from src.gui.scale_widget import tkScale_Widget
 
-from STL.ReadSTL import STL
-from STL.PlotSTL import PlotSTL
+from src.STL.ReadSTL import STL
+from src.STL.PlotSTL import PlotSTL
 
 class tkSTL_Plot:
     def __init__(self, stl: STL, parent): 

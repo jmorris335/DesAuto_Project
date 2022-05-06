@@ -2,9 +2,9 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 
-from gui.plot_window import tkSTL_Plot
+from src.gui.plot_window import tkSTL_Plot
 
-from STL.ReadSTL import STL
+from src.STL.ReadSTL import STL
 
 class Main:
     def __init__(self, root):

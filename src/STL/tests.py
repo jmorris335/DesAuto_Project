@@ -1,6 +1,6 @@
 # %%
-from ReadSTL import STL
-from PlotSTL import PlotSTL
+from src.ReadSTL import STL
+from src.PlotSTL import PlotSTL
     
 # %%
 # stl = STL("../../Sample STL Files/Eiffel Tower 760.stl")

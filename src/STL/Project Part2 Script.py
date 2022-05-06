@@ -3,13 +3,13 @@ import os
 from copy import deepcopy
 from math import floor, ceil
 
-from STL.ReadSTL import STL, STL_Facet as facet
-from STL.Clipping import clipping
-from Transform import Transform
+from src.STL.ReadSTL import STL, STL_Facet as facet
+from src.STL.Clipping import clipping
+from src.Transform import Transform
 from src.STL.PlotSTL import PlotSTL
-import STL.Methods as mthd
-from STL.SliceSTL import Edge, Hull, Slicer
-from STL.Extrusion import Extrusion, Path, calcInfillData
+import src.STL.Methods as mthd
+from src.STL.SliceSTL import Edge, Hull, Slicer
+from src.STL.Extrusion import Extrusion, Path, calcInfillData
 
 """
 This script is made to complete the requirements of the Clemson Design Automation Project Part 2 (Spring 2022)

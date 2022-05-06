@@ -1,6 +1,6 @@
 import numpy as np
 
-from STL.ReadSTL import STL, STL_Facet
+from src.STL.ReadSTL import STL, STL_Facet
 
 def clipping(stl: STL, windowSize : tuple):
     """

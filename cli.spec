@@ -8,7 +8,7 @@ a = Analysis(
     ['cli.py'],
     pathex=[],
     binaries=[],
-    datas=[ ('Dist_Meta/', '.'), ('LICENSE', '.') ],
+    datas=[ ('Dist_Meta/', '.'), ('LICENSE', '.'), ('Submission Notes.docx', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
