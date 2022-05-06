@@ -62,6 +62,20 @@ class Slice:
             zcoords.extend(hull_z)
         return xcoords, ycoords, zcoords
 
+    def printCoordsToTxt(self):
+        xcoords = []
+        ycoords = []
+        zcoords = []
+        xcoords, ycoords, zcoords = self.getXYZCoordinates()
+        txt_lines = []
+        for i in range(len(xcoords)):
+            if i < (len(xcoords)-1):
+                txt_lines.append(["t" + i + "\t" + xcoords[i] + "\t" + ycoords[i] + "\t" + zcoords[i] + "\t" + "1\n"])
+            else:
+                txt_lines.append(["t" + i + "\t" + xcoords[i] + "\t" + ycoords[i] + "\t" + zcoords[i] + "\t" + "0\n"])
+        return txt_lines
+
+
     #FIXME: Add methods for accessing a certain edge
 
 class Slicer:

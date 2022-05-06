@@ -68,6 +68,10 @@ for slice in print_list:
             f.write("t" + i + "\t" + all_coords[0][i] + "\t" + all_coords[1][i] + "\t" + all_coords[2][i] + "\t" + "1\n")
         else:
             f.write("t" + i + "\t" + all_coords[0][i] + "\t" + all_coords[1][i] + "\t" + all_coords[2][i] + "\t" + "0\n")
+    """
+    f.writelines(slice.printCoordsToTxt())
+    """
+
 
 f.close()
 
