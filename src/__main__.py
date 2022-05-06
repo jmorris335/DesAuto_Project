@@ -1,5 +1,3 @@
-from STL.ReadSTL import STL
-from STL.PlotSTL import PlotSTL
 from gui.main_window import Main
 
 from tkinter import *
