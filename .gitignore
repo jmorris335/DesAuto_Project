@@ -10,3 +10,6 @@ curr_plot.png
 # ignore built environments
 build/
 dist/
+
+# ignore autosave
+~$*.docx
