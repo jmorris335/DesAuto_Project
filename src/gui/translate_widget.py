@@ -24,6 +24,9 @@ class tkTranslate_Widget:
         
         bt_left = ttk.Button(self.mainframe, text='Left', command=self.setLeft)
         bt_left.grid(column=0, row=3, sticky=(N,S,E,W))
+
+        bt_up = ttk.Button(self.mainframe, text='To Floor', command=self.setToFloor)
+        bt_up.grid(column=1, row=3)
         
         bt_right = ttk.Button(self.mainframe, text='Right', command=self.setRight)
         bt_right.grid(column=2, row=3, sticky=(N,S,E,W))
@@ -36,6 +39,9 @@ class tkTranslate_Widget:
 
     def setRight(self):
         self.dir.set('right')
+
+    def setToFloor(self):
+        self.dir.set('floor')
 
     def setLeft(self):
         self.dir.set('left')

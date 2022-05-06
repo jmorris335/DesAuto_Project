@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
-from os import path
+import os
 
 from STL.ReadSTL import STL, STL_Facet as Face
 from STL.SliceSTL import Slicer
@@ -82,21 +82,27 @@ class PlotSTL(object):
         self.T = Transform(centroid=self.curr_centroid)
         self.orig_centroid = self.curr_centroid
         self.orig_orientation = self.curr_orientation
+        self.curr_scale = 1
         self.align(45, 45, 'z')
         self.extruded = False
 
     # Plotting Methods
-    def plotSTL(self, show: True):
+    def plotSTL(self, show=True):
         ''' Plots the STL object on a standard 3D platform'''
         self.setToJustBuildPlate()
         self.plotFaces()
-        self.fitToBuildSpace()
         if show: plt.show()
 
-    def plotFaces(self):    
+    def plotWireframe(self, show=True):
+        ''' Plots the STL but with transparent faces.'''
+        self.setToJustBuildPlate()
+        self.plotFaces(color=[1, 1, 1, 0])
+        if show: plt.show()
+
+    def plotFaces(self, color=[30/255, 144/255, 255/255, 1]):    
         ''' Plots each face in the STL''' 
         for face in self.stl.faces:
-            self.plotFace(face)
+            self.plotFace(face, color)
 
     def plotFace(self, face: Face, color=[30/255, 144/255, 255/255, 1]):
         ''' Plots the inputted face as a polygon. The default color is Dodger 
@@ -173,6 +179,46 @@ class PlotSTL(object):
         bound, upper bound)'''
         self.ax.set(xlim=xlimit, ylim=ylimit, zlim=zlimit)
 
+    def getLimits(self):
+        ''' Returns the current limits'''
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
+        zlim = self.ax.get_zlim()
+        return xlim, ylim, zlim
+
+    def zoomRegular(self, level=0, offset=5.):
+        ''' Zooms based on a certain level.'''
+        self.fitToBuildSpace()
+        total_offset = -float(level) * offset
+        self.zoom(total_offset)
+
+    def zoom(self, offset=5.):
+        ''' Zooms the proportion in scale.'''
+        xlim, ylim, zlim = self.getLimits()
+        new_x = (xlim[0] - offset, xlim[1] + offset)
+        new_y = (ylim[0] - offset, ylim[1] + offset)
+        new_z = (zlim[0] - offset, zlim[1] + offset)
+        self.setLimits(new_x, new_y, new_z)
+
+    def pan(self, panx=0., pany=0., panz=0.):
+        ''' Pans the view window.'''
+        xlim, ylim, zlim = self.getLimits()
+        new_x = (xlim[0] + panx, xlim[1] + panx)
+        new_y = (ylim[0] + pany, ylim[1] + pany)
+        new_z = (zlim[0] + panz, zlim[1] + panz)
+        self.setLimits(new_x, new_y, new_z)
+
+    def panRegular(self, lvlx=0., lvly=0., lvlz=0., offset=5):
+        ''' Pans the view window.'''
+        xlim, ylim, zlim = self.getLimits()
+        delx = xlim[1] - xlim[0]
+        dely = ylim[1] - ylim[0]
+        delz = zlim[1] - zlim[0]
+        new_x = ((-delx / 2) + (lvlx * offset), (delx / 2) + (lvlx * offset))
+        new_y = ((-dely / 2) + (lvly * offset), (dely / 2) + (lvly * offset))
+        new_z = (0 + (lvlz * offset), delz + (lvlz * offset))
+        self.setLimits(new_x, new_y, new_z)
+
     # View Methods
     def fitAxes(self):
         ''' Fits each axis to the maximum size of the STL. The part is 
@@ -233,6 +279,16 @@ class PlotSTL(object):
     def translate(self, delx: float=0, dely: float=0, delz: float=0):
         ''' Translates the STL along the three axes.'''
         self.T.translate(delx=delx, dely=dely, delz=delz)
+
+    def scale(self, global_scale):
+        ''' Scales the STL globally by global_scale.'''
+        self.curr_scale = self.curr_scale * global_scale
+        self.T.scaleGlobal(global_scale)
+
+    def resetScale(self):
+        ''' Resets to the original scale'''
+        self.T.scaleGlobal(1 / self.curr_scale)
+        self.curr_scale = 1
 
     def orthographic(self, view: str):
         ''' Orients the part to an orthographic view (where front is defined as the
@@ -321,7 +377,6 @@ class PlotSTL(object):
         layer_index in a different color.'''
         self.clearPlot()
         self.setToJustBuildPlate()
-        self.fitToBuildSpace()
         for i in range(layer_index):
             self.plotLayer(i)
         self.plotLayer(layer_index, color)
@@ -355,7 +410,6 @@ class PlotSTL(object):
         if layer_index >= self.extrusion.numSlices: layer_index = self.extrusion.numSlices - 1
         self.clearPlot()
         self.setToJustBuildPlate()
-        self.fitToBuildSpace()
         for i in range(layer_index):
             self.plotExtrusionSlice(i)
         self.plotExtrusionSlice(layer_index, highlight_color)
@@ -373,7 +427,25 @@ class PlotSTL(object):
         return limits
 
     def saveImage(self, filename='curr_plot.png'):
-        cur_path = path.dirname(__file__)
-        filepath = path.join(cur_path, '..', filename)
+        cur_path = os.path.dirname(__file__)
+        filepath = os.path.join(cur_path, '..', filename)
         self.fig.savefig(filepath)
         plt.close(self.fig)
+
+    def savePaths(self, filename='curr_paths.txt'):
+        cur_path = os.path.dirname(__file__)
+        filepath = os.path.join(cur_path, '..', filename)
+        if not self.extruded: self.buildExtrusion()
+        lines = ['Extrusion Paths for ' + self.stl.name]
+        lines.append('Mass of Print: ' + str(self.extrusion.printMass()) + 'g')
+        lines.append('Time of Print: ' + str(self.extrusion.time_to_print) + 's')
+        lines.append('\n')
+        t_i = 0
+        for i in range(self.extrusion.numSlices):
+            for path in self.extrusion.slices[i]:
+                path_lines = path.toString()
+                for path_line in path_lines:
+                    lines.append('t' + str(t_i) + '\t' + path_line)
+                    t_i += 1
+        with open(filepath, 'w') as f:
+            f.writelines('\n'.join(lines))
