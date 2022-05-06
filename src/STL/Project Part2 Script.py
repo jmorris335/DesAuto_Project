@@ -31,7 +31,7 @@ mm2in = 1/25.4 #conversion factor to inches from millimeters
 build_plate_dimm = (8, 8, 6) #dimmensions of the build plate
 
 T = Transform()
-T.scale(x = mm2in, y = mm2in, x = mm2in)
+T.scale(x = mm2in, y = mm2in, z = mm2in)
 T.translateToOrigin()
 T.translate(delx = build_plate_dimm[0]/2, dely = build_plate_dimm[1]/2, delz = build_plate_dimm[2]/2)
 buildSTL = PlotSTL(stl)
