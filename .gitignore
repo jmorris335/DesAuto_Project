@@ -5,6 +5,7 @@
 src/STL/__pycache__/
 *.pyc
 *.pyo
+curr_plot.png
 
 # ignore built environments
 build/

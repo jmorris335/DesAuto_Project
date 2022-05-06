@@ -1,9 +1,9 @@
-from cmath import inf
 import matplotlib.pyplot as plt
 # This import registers the 3D projection, but is otherwise unused.
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
+from os import path
 
 from STL.ReadSTL import STL, STL_Facet as Face
 from STL.SliceSTL import Slicer
@@ -78,7 +78,7 @@ class PlotSTL(object):
         self.fig = plt.figure(figsize=(figsize[0]*self.units.px2in, figsize[1]*self.units.px2in))
         self.ax = plt.axes(projection='3d')
         self.curr_centroid = self.getCentroid()
-        self.curr_orientation = (0, 0, 0)
+        self.curr_orientation = [0, 0, 0]
         self.T = Transform(centroid=self.curr_centroid)
         self.orig_centroid = self.curr_centroid
         self.orig_orientation = self.curr_orientation
@@ -86,12 +86,12 @@ class PlotSTL(object):
         self.extruded = False
 
     # Plotting Methods
-    def plotSTL(self):
+    def plotSTL(self, show: True):
         ''' Plots the STL object on a standard 3D platform'''
         self.setToJustBuildPlate()
         self.plotFaces()
         self.fitToBuildSpace()
-        plt.show()
+        if show: plt.show()
 
     def plotFaces(self):    
         ''' Plots each face in the STL''' 
@@ -279,8 +279,10 @@ class PlotSTL(object):
             face.loadFromMatrix(npA.tolist())
             face.normal = new_normal
         self.curr_centroid = self.T.curr_centroid
-        self.curr_orientation = self.T.curr_orientation
-        self.T = Transform(orientation=self.curr_orientation, centroid=self.curr_centroid)
+        if len(self.T.curr_orientation) > 0:
+            self.curr_orientation = self.T.curr_orientation[0]
+        else: self.curr_orientation = [0, 0, 0]
+        self.T.T = np.identity(4)
 
     # Slicing Methods
     def sliceAndPlot(self, layer_height=0.2):
@@ -298,8 +300,8 @@ class PlotSTL(object):
         self.clearPlot()
         for i in range(len(self.slicer.slices)):
             self.plotLayer(i)
-        self.setToJustBuildPlate()
-        self.fitToBuildSpace()
+        # self.setToJustBuildPlate()
+        # self.fitToBuildSpace()
 
     def plotLayer(self, layer_index, color=(0, 0.6, .13, 0.5)):
         ''' Plots a single layer of the sliced STL.'''
@@ -369,3 +371,9 @@ class PlotSTL(object):
                 if vertex[i] < limits[i*2]: limits[i*2] = vertex[i]
                 if vertex[i] > limits[i*2+1]: limits[i*2+1] = vertex[i]
         return limits
+
+    def saveImage(self, filename='curr_plot.png'):
+        cur_path = path.dirname(__file__)
+        filepath = path.join(cur_path, '..', filename)
+        self.fig.savefig(filepath)
+        plt.close(self.fig)

@@ -1,13 +1,13 @@
-import numpy as np
-import os
+# %%
+from os import path
 
 from STL.ReadSTL import STL
 from STL.PlotSTL import PlotSTL
 from STL.Clipping import clipping
 
 stl_file = 'Simple 8.stl'
-cur_path = os.path.dirname(__file__)
-stl_filepath = os.path.join(cur_path, '..', 'Sample STL Files', stl_file)
+cur_path = path.dirname(__file__)
+stl_filepath = path.join(cur_path, '..', 'Sample STL Files', stl_file)
 
 # Test 1: Load and Create Object
 testObj = STL(stl_filepath)
@@ -29,6 +29,14 @@ print(testObj.toString())
 # print(emptyCopy.toString())
 
 # Test 4: Clipping
-clipped = clipping(testObj, (20, 20, 4))
-print(clipped.toString())
-PlotSTL(clipped).plotSTL()
+# clipped = clipping(testObj, (5, 8, 10))
+# plot_c = PlotSTL(clipped)
+# plot_c.plotSTL()
+# plot_c.align(90, 270, 'z')
+# plot_c.setLimits((-1, 6), (-1, 9)) 
+
+# Test 5: Plot updating
+plot = PlotSTL(testObj)
+plot.orthographic('back')
+plot.updateSTL()
+plot.orthographic('top')
