@@ -135,9 +135,9 @@ class PlotSTL(object):
         ''' Either shows or covers the axis lines'''
         if on: color = (0.0, 0.0, 0.0, 1.0)
         else: color = (1.0, 1.0, 1.0, 0.0)
-        self.ax.w_xaxis.line.set_color(color)
-        self.ax.w_yaxis.line.set_color(color)
-        self.ax.w_zaxis.line.set_color(color)
+        self.ax.xaxis.line.set_color(color)
+        self.ax.yaxis.line.set_color(color)
+        self.ax.zaxis.line.set_color(color)
 
     def setBackground(self, xplane=(1.0, 1.0, 1.0, 0.0), \
         yplane=(1.0, 1.0, 1.0, 0.0), zplane=(1.0, 1.0, 1.0, 0.0)):
@@ -245,7 +245,7 @@ class PlotSTL(object):
     def align(self, elev, azim, vertical_axis='z'):
         ''' Aligns the axes to the inputted elevation and azimuth. Also
         orientes the axes so that the vertical axis is vertical to the viewer.'''
-        self.ax.view_init(elev, azim, vertical_axis)
+        self.ax.view_init(elev, azim, vertical_axis=vertical_axis)
 
     def alignXY(self):
         ''' Aligns the screen so that the XY plane is parallel to the screen'''
