@@ -146,6 +146,7 @@ class tkSTL_Plot:
         cur_path = os.path.dirname(__file__)
         filepath = os.path.join(cur_path, '..', filename)
         fig.savefig(filepath, bbox_inches='tight', pad_inches=-.2)
+        global plot_img
         plot_img = ImageTk.PhotoImage(Image.open(filepath))
         return plot_img
 
